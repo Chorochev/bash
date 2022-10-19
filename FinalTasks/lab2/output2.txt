@@ -1,0 +1,6 @@
+[ Asserts Samples ], 1..2 tests
+-----------------------------------------------------------------------------------
+not ok 1 expecting command finishes successfully (bash way), 7ms
+ok 2 expecting command prints some message (the same as above, bats way), 10ms
+-----------------------------------------------------------------------------------
+1 (of 2) tests passed, 1 tests failed, rated as 50%, spent 17ms

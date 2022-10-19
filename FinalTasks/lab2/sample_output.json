@@ -1,0 +1,21 @@
+{
+    "testName": "Asserts Samples",
+    "tests": [
+        {
+            "name": "expecting command finishes successfully (bash way)",
+            "status": false,
+            "duration": "7ms"
+        },
+        {
+            "name": "expecting command prints some message (the same as above, bats way)",
+            "status": true,
+            "duration": "10ms"
+        }
+    ],
+    "summary": {
+        "success": 1,
+        "failed": 1,
+        "rating": 50,
+        "duration": "17ms"
+    }
+}
