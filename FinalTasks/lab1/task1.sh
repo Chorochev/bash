@@ -16,7 +16,7 @@ done
 temp_accounts=$(mktemp)
 # Save to file each cell on new line
 while read line; do    
-    echo $line | awk -vFPAT='[^,]*|"[^"]*"' '{for (i=1; i<=NF; i++) { print $i }}' >>$temp_accounts
+    echo $line | awk -vFPAT='[^,]*|("([^"]|"")*")' -v OFS=',' '{for (i=1; i<=NF; i++) { print $i }}' >>$temp_accounts
 done <$filepath
 
 collumns=${#headers[@]}

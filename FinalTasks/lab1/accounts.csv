@@ -32,3 +32,4 @@ id,location_id,name,title,email,department
 31,8,David Genesy,Account Manager,,
 32,8,Elizabeth Feeney,CEO,e.feeney@foobar.org,Operations
 33,8,Erika Meeks,Tester,e.meeks@foobar.org,Operations
+34,8,Erika Meeks,"Tester, ""man""",e.meeks@foobar.org,"A. B"
