@@ -1,55 +1,123 @@
-#! /bin/bash
-# Reading headers of CSV file.
-first_line=$(head -n 1 $1)
-# Removing commas.
-headers=${first_line//,/ }
+#!/bin/bash
+
+filepath=$1
+newfilepath="accounts_new.csv"
+######################################################
+# Creating an array of headers
+first_line=$(head -n 1 $filepath)
+headers=(${first_line//,/ })
+declare -A hash_headers
+for ((i = 0; i < ${#headers[@]}; i++)); do
+    hash_headers[${headers[$i]}]=$i
+done
+######################################################
+# Getting data
 # Creating a temporary file.
 temp_accounts=$(mktemp)
-# An array of emails
-declare -A email_array
+# Save to file each cell on new line
+while read line; do    
+    echo $line | awk -vFPAT='[^,]*|"[^"]*"' '{for (i=1; i<=NF; i++) { print $i }}' >>$temp_accounts
+done <$filepath
 
-# Reading all the file.
-while IFS="," read -r $headers; do
-    ######################################################
+collumns=${#headers[@]}
+skip_lines=$((collumns + 1))
+current_collumn=0
+rows=0
+line_index=0
+declare -a names
+declare -a locations
+declare -a emails
+declare -A check_emails
+######################################################
+# Getting locations and names
+while read line; do
+    if ((current_collumn == collumns)); then
+        current_collumn=0
+        ((rows++))
+    fi
+
+    if ((${hash_headers[location_id]} == current_collumn)); then locations[$rows]=$line; fi
+    if ((${hash_headers[name]} == current_collumn)); then names[$rows]=$line; fi
+
+    ((current_collumn++))
+    ((line_index++))
+done < <(tail -n +$skip_lines $temp_accounts)
+
+######################################################
+# Updating data
+count_row=${#names[@]}
+for ((i = 0; i < $count_row; i++)); do
     # Formatting the name
-    arr_name=($name)
-    for ((i = 0; i < ${#arr_name[@]}; i++)); do
+    arr_name=(${names[$i]})
+    for ((j = 0; j < ${#arr_name[@]}; j++)); do
         # The name may be double.
         # Converting a double name to an array.
-        arr_double_name=(${arr_name[$i]//-/ })
-        for ((j = 0; j < ${#arr_double_name[@]}; j++)); do
+        arr_double_name=(${arr_name[$j]//-/ })
+        for ((y = 0; y < ${#arr_double_name[@]}; y++)); do
             # Doing lowercase all the letters.
-            arr_double_name[$j]="${arr_double_name[$j],,}"
+            arr_double_name[$y]="${arr_double_name[$y],,}"
             # Doing uppercase the first letter.
-            arr_double_name[$j]="${arr_double_name[$j]^}"
+            arr_double_name[$y]="${arr_double_name[$y]^}"
         done
         # Converting an array to a double name.
-        arr_name[$i]=$(printf "%s-" "${arr_double_name[@]}" | cut -d "-" -f 1-${#arr_double_name[@]})
+        arr_name[$j]=$(printf "%s-" "${arr_double_name[@]}" | cut -d "-" -f 1-${#arr_double_name[@]})
     done
     new_name=${arr_name[*]}
-    ######################################################
-    # Creating the email
+    names[$i]=$new_name
+
+    # Creating the part of email
     firstletter=${arr_name[0]:0:1}
     surname=$arr_name[1]
     new_email="${firstletter}${arr_name[1]}"
     new_email="${new_email,,}"
-    ((email_array[$new_email]++))
-    # Append a new row
-    echo "$id,$location_id,$new_name,$title,$new_email,$department" >>$temp_accounts
-done < <(tail -n +2 $1)
+    emails[$i]=$new_email
+    ((check_emails[$new_email]++))
+done
 
-# Creating "accounts_new.csv"
-echo "$first_line" >accounts_new.csv
-# Reading all the file.
-while IFS="," read -r $headers; do
-    if ((email_array[$email] > 1)); then
-        new_email="${email}${location_id}@abc.com"
+######################################################
+# Creating emails
+count_row=${#names[@]}
+for ((i = 0; i < $count_row; i++)); do
+    email=${emails[$i]}
+    if ((check_emails[$email] > 1)); then
+        new_email="${email}${locations[$i]}@abc.com"
     else
         new_email="$email@abc.com"
     fi
-    # Append a new row
-    echo "$id,$location_id,$name,$title,$new_email,$department" >>accounts_new.csv
-done <$temp_accounts
+    emails[$i]=$new_email
+done
+
+######################################################
+# Creating "accounts_new.csv"
+echo $first_line >$newfilepath
+
+echo "" >>$temp_accounts # it needs for next while
+
+declare -A cur_row
+current_collumn=0
+rows=0
+while read line; do
+    if ((current_collumn == collumns)); then
+        id=${cur_row[id]}
+        location_id=${cur_row[location_id]}
+        name=${names[$rows]}
+        title=${cur_row[title]}
+        new_email=${emails[$rows]}
+        department=${cur_row[department]}
+        # Append a new row
+        echo "$id,$location_id,$name,$title,$new_email,$department" >>$newfilepath
+
+        current_collumn=0
+        ((rows++))
+    fi
+
+    if ((${hash_headers[id]} == current_collumn)); then cur_row[id]=$line; fi
+    if ((${hash_headers[location_id]} == current_collumn)); then cur_row[location_id]=$line; fi
+    if ((${hash_headers[title]} == current_collumn)); then cur_row[title]=$line; fi
+    if ((${hash_headers[department]} == current_collumn)); then cur_row[department]=$line; fi
+
+    ((current_collumn++))
+done < <(tail -n +$skip_lines $temp_accounts)
 
 # Deleting the temporary file
 rm ${temp_accounts}
