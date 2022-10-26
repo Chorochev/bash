@@ -15,13 +15,13 @@ done
 # Creating a temporary file.
 temp_accounts=$(mktemp)
 # Save to file each cell on new line
-while read line; do    
+while read line; do
     echo $line | awk -vFPAT='[^,]*|("([^"]|"")*")' -v OFS=',' '{for (i=1; i<=NF; i++) { print $i }}' >>$temp_accounts
 done <$filepath
 
-collumns=${#headers[@]}
-skip_lines=$((collumns + 1))
-current_collumn=0
+columns=${#headers[@]}
+skip_lines=$((columns + 1))
+current_column=0
 rows=0
 line_index=0
 declare -a names
@@ -31,15 +31,15 @@ declare -A check_emails
 ######################################################
 # Getting locations and names
 while read line; do
-    if ((current_collumn == collumns)); then
-        current_collumn=0
+    if ((current_column == columns)); then
+        current_column=0
         ((rows++))
     fi
 
-    if ((${hash_headers[location_id]} == current_collumn)); then locations[$rows]=$line; fi
-    if ((${hash_headers[name]} == current_collumn)); then names[$rows]=$line; fi
+    if ((${hash_headers[location_id]} == current_column)); then locations[$rows]=$line; fi
+    if ((${hash_headers[name]} == current_column)); then names[$rows]=$line; fi
 
-    ((current_collumn++))
+    ((current_column++))
     ((line_index++))
 done < <(tail -n +$skip_lines $temp_accounts)
 
@@ -94,10 +94,11 @@ echo $first_line >$newfilepath
 echo "" >>$temp_accounts # it needs for next while
 
 declare -A cur_row
-current_collumn=0
+current_column=0
 rows=0
 while read line; do
-    if ((current_collumn == collumns)); then
+    if ((current_column == columns)); then
+        # Adding a new row to "accounts_new.csv"
         id=${cur_row[id]}
         location_id=${cur_row[location_id]}
         name=${names[$rows]}
@@ -107,16 +108,17 @@ while read line; do
         # Append a new row
         echo "$id,$location_id,$name,$title,$new_email,$department" >>$newfilepath
 
-        current_collumn=0
+        current_column=0
         ((rows++))
     fi
 
-    if ((${hash_headers[id]} == current_collumn)); then cur_row[id]=$line; fi
-    if ((${hash_headers[location_id]} == current_collumn)); then cur_row[location_id]=$line; fi
-    if ((${hash_headers[title]} == current_collumn)); then cur_row[title]=$line; fi
-    if ((${hash_headers[department]} == current_collumn)); then cur_row[department]=$line; fi
+    # Remembering columns
+    if ((${hash_headers[id]} == current_column)); then cur_row[id]=$line; fi
+    if ((${hash_headers[location_id]} == current_column)); then cur_row[location_id]=$line; fi
+    if ((${hash_headers[title]} == current_column)); then cur_row[title]=$line; fi
+    if ((${hash_headers[department]} == current_column)); then cur_row[department]=$line; fi
 
-    ((current_collumn++))
+    ((current_column++))
 done < <(tail -n +$skip_lines $temp_accounts)
 
 # Deleting the temporary file
